@@ -6,6 +6,7 @@ const DsrRoutes = require('./routes/DsrRoutes');
 const sequelize = require('./config');
 const CounselorWiseSummery = require('./models/CounselorData');
 const CounselorWiseSummary = require('./models/CounselorWiseSummary')
+const CounselorWiseTeam= require('./models/CounselorWiseTeam')
 const app = express();
 const port = 7000;
 
@@ -39,6 +40,49 @@ app.get('/', (req, res) => {
     res.json('Hello, how are you...');
 });
 
+
+
+app.post('/team/upload', upload.single('excelFile'), async (req, res) => {
+    try {
+        const fileBuffer = req.file.buffer;
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(fileBuffer);
+
+        const worksheet = workbook.getWorksheet(1);
+        if (worksheet) {
+            const dataToSave = [];
+            worksheet.eachRow((row, rowNumber) => {
+                if (rowNumber !== 1) {
+                    const rowData = {
+                        ExecutiveName: row.getCell(1).value || null,
+                        TeamLeaders: row.getCell(2).value || null,
+                        TeamManager: row.getCell(3).value || null,
+                        AsstManagers : row.getCell(4).value || null,
+                        Team: row.getCell(5).value || null,
+                        HC: row.getCell(6).value || null, 
+                        Group: row.getCell(7).value || null,
+                        Month: row.getCell(8).value || null,
+                    };
+                    dataToSave.push(rowData);
+                }
+            });
+
+            await CounselorWiseTeam.bulkCreate(dataToSave)
+                .then(() => {
+                    console.log('Team saved to the database.');
+                })
+                .catch(err => {
+                    console.error('Error saving Team to the database:', err);
+                });
+            res.json({ message: 'Excel Team uploaded and team saved to the database in 30 seconds' });
+        } else {
+            res.status(400).json({ error: 'No valid worksheet found in the Excel file To add Team.' });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/summary/upload', upload.single('excelFile'), async (req, res) => {
     try {
         const fileBuffer = req.file.buffer;
@@ -49,41 +93,40 @@ app.post('/summary/upload', upload.single('excelFile'), async (req, res) => {
         if (worksheet) {
             const dataToSave = [];
             worksheet.eachRow((row, rowNumber) => {
-                if (rowNumber !== 1) { // Skip the header row
+                if (rowNumber !== 1) {
                     const rowData = {
                         Month: row.getCell(1).value || null,
                         LeadID: row.getCell(2).value || null,
-                        'Lead Creation Date': row.getCell(3).value || null,
-                        'Executive Name': row.getCell(4).value || null,
+                        LeadCreationDate: row.getCell(3).value || null,
+                        ExecutiveName: row.getCell(4).value || null,
                         Team: row.getCell(5).value || null,
-                        'Student Name': row.getCell(6).value || null,
-                        'Course Short Name': row.getCell(7).value || null,
+                        StudentName: row.getCell(6).value || null,
+                        CourseShortName: row.getCell(7).value || null,
                         Specialization: row.getCell(8).value || null,
-                        'Amount Received': row.getCell(9).value || null,
-                        'Discount Amount': row.getCell(10).value || null,
-                        'Discount Reason': row.getCell(11).value || null,
-                        'Study Material': row.getCell(12).value || null,
-                        'Study Material Discount': row.getCell(13).value || null,
-                        'Amount Billed': row.getCell(14).value || null,
-                        'Payment Mode': row.getCell(15).value || null,
-                        'Account details': row.getCell(16).value || null,
-                        'Payment Option': row.getCell(17).value || null,
-                        'Sale Date': row.getCell(18).value || null,
-                        'Contact Number': row.getCell(19).value || null,
-                        'Email ID': row.getCell(20).value || null,
-                        'Source type': row.getCell(21).value || null,
+                        AmountReceived: row.getCell(9).value || null,
+                        DiscountAmount: row.getCell(10).value || null,
+                        DiscountReason: row.getCell(11).value || null,
+                        StudyMaterial: row.getCell(12).value || null,
+                        StudyMaterialDiscount: row.getCell(13).value || null,
+                        AmountBilled: row.getCell(14).value || null,
+                        PaymentMode: row.getCell(15).value || null,
+                        Accountdetails: row.getCell(16).value || null,
+                        PaymentOption: row.getCell(17).value || null,
+                        SaleDate: row.getCell(18).value || null,
+                        ContactNumber: row.getCell(19).value || null,
+                        EmailID: row.getCell(20).value || null,
+                        Sourcetype: row.getCell(21).value || null,
                         Team2: row.getCell(22).value || null,
-                        'Primary Source': row.getCell(23).value || null,
-                        'Secondary Source': row.getCell(24).value || null,
+                        PrimarySource: row.getCell(23).value || null,
+                        SecondarySource: row.getCell(24).value || null,
                         LeadID2: row.getCell(25).value || null,
                         Source: row.getCell(26).value || null,
-                        'Agency Source': row.getCell(27).value || null,
+                        AgencySource: row.getCell(27).value || null,
                         '1st payment amt': row.getCell(28).value || null,
-                        'Enrollment Id': row.getCell(29).value || null,
+                        EnrollmentId: row.getCell(29).value || null,
                         Cohort: row.getCell(30).value || null,
-                        'Secondary Source2': row.getCell(31).value || null,
+                        SecondarySource2: row.getCell(31).value || null,
                     };
-
                     dataToSave.push(rowData);
                 }
             });
@@ -103,11 +146,6 @@ app.post('/summary/upload', upload.single('excelFile'), async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-
-
-
-
-
 
 app.post('/upload', upload.single('excelFile'), async (req, res) => {
     try {
@@ -130,17 +168,10 @@ app.post('/upload', upload.single('excelFile'), async (req, res) => {
                         Team: row.getCell(6).value,
                         Status: row.getCell(7).value,
                         Target: row.getCell(8).value,
-                        Admissions: row.getCell(9).value,
-                        CollectedRevenue: row.getCell(10).value,
-                        BilledRevenue: row.getCell(11).value,
-                        TotalLead: row.getCell(12).value,
-                        AchievementPercentage: row.getCell(13).value,
-                        ConversionPercentage: row.getCell(14).value,
-                        CPST: row.getCell(15).value,
-                        BPST: row.getCell(16).value,
-                        ConnectedCall: row.getCell(17).value,
-                        TalkTime: row.getCell(18).value,
-                        FinalGroup: row.getCell(19).value,
+                        TotalLead: row.getCell(9).value,
+                        ConnectedCall: row.getCell(10).value,
+                        TalkTime: row.getCell(11).value,
+                        FinalGroup: row.getCell(12).value,
                     };
 
                     dataToSave.push(rowData);

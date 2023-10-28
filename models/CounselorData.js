@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config');
+const CounselorWiseSummary = require('./CounselorWiseSummary');
 
 const CounselorData = sequelize.define('CounselorData', {
   Counselor: {
@@ -27,29 +28,8 @@ const CounselorData = sequelize.define('CounselorData', {
   Target: {
     type: DataTypes.INTEGER,
   },
-  Admissions: {
-    type: DataTypes.INTEGER,
-  },
-  CollectedRevenue: {
-    type: DataTypes.INTEGER,
-  },
-  BilledRevenue: {
-    type: DataTypes.INTEGER,
-  },
   TotalLead: {
     type: DataTypes.INTEGER,
-  },
-  AchievementPercentage: {
-    type: DataTypes.FLOAT,
-  },
-  ConversionPercentage: {
-    type: DataTypes.FLOAT,
-  },
-  CPST: {
-    type: DataTypes.STRING,
-  },
-  BPST: {
-    type: DataTypes.STRING,
   },
   ConnectedCall: {
     type: DataTypes.INTEGER,
@@ -62,6 +42,11 @@ const CounselorData = sequelize.define('CounselorData', {
   },
 },{
   timestamps: false,
+});
+
+CounselorData.hasMany(CounselorWiseSummary, {
+  foreignKey: 'ExecutiveName', // This is the name of the column in the CounselorWiseSummary table
+  sourceKey: 'Counselor', // This is the name of the column in the CounselorData table
 });
 
 module.exports = CounselorData;

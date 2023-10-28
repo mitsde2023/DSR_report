@@ -8,70 +8,70 @@ const CounselorWiseSummary = sequelize.define('CounselorWiseSummary', {
   LeadID: {
     type: DataTypes.STRING,
   },
-  'Lead Creation Date': {
+  LeadCreationDate: {
     type: DataTypes.DATE,
   },
-  'Executive Name': {
+  ExecutiveName: {
     type: DataTypes.STRING,
   },
   Team: {
     type: DataTypes.STRING,
   },
-  'Student Name': {
+  StudentName: {
     type: DataTypes.STRING,
   },
-  'Course Short Name': {
+  CourseShortName: {
     type: DataTypes.STRING,
   },
   Specialization: {
     type: DataTypes.STRING,
   },
-  'Amount Received': {
-    type: DataTypes.NUMBER,
-  },
-  'Discount Amount': {
+  AmountReceived: {
     type: DataTypes.INTEGER,
   },
-  'Discount Reason': {
-    type: DataTypes.STRING,
-  },
-  'Study Material': {
-    type: DataTypes.STRING,
-  },
-  'Study Material Discount': {
-    type: DataTypes.STRING,
-  },
-  'Amount Billed': {
+  DiscountAmount: {
     type: DataTypes.INTEGER,
   },
-  'Payment Mode': {
+  DiscountReason: {
     type: DataTypes.STRING,
   },
-  'Account details': {
+  StudyMaterial: {
     type: DataTypes.STRING,
   },
-  'Payment Option': {
+  StudyMaterialDiscount: {
     type: DataTypes.STRING,
   },
-  'Sale Date': {
+  AmountBilled: {
+    type: DataTypes.INTEGER,
+  },
+  PaymentMode: {
+    type: DataTypes.STRING,
+  },
+  Accountdetails: {
+    type: DataTypes.STRING,
+  },
+  PaymentOption: {
+    type: DataTypes.STRING,
+  },
+  SaleDate: {
     type: DataTypes.DATE,
   },
-  'Contact Number': {
+  ContactNumber: {
     type: DataTypes.STRING,
   },
-  'Email ID': {
+  EmailID: {
     type: DataTypes.STRING,
   },
-  'Source type': {
+  Sourcetype: {
     type: DataTypes.STRING,
   },
   Team2: {
     type: DataTypes.STRING,
   },
-  'Primary Source': {
+  PrimarySource: {
     type: DataTypes.STRING,
   },
-  'Secondary Source': {
+  SecondarySource: {
     type: DataTypes.STRING,
   },
   LeadID2: {
@@ -80,24 +80,24 @@ const CounselorWiseSummary = sequelize.define('CounselorWiseSummary', {
   Source: {
     type: DataTypes.STRING,
   },
-  'Agency Source': {
+  AgencySource: {
     type: DataTypes.STRING,
   },
   '1st payment amt': {
     type: DataTypes.INTEGER,
   },
 
-  'Enrollment Id': {
+  EnrollmentId: {
     type: DataTypes.STRING,
   },
   Cohort: {
     type: DataTypes.STRING,
   },
-  'Secondary Source2': {
+  SecondarySource2: {
     type: DataTypes.STRING,
   },
 }, {
-  timestamps: false, // If you don't have timestamps columns
+  timestamps: false,
 });
 
 module.exports = CounselorWiseSummary;
