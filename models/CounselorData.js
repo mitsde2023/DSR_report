@@ -37,10 +37,13 @@ const CounselorData = sequelize.define('CounselorData', {
   TalkTime: {
     type: DataTypes.STRING,
   },
-  FinalGroup: {
+  Final: {
     type: DataTypes.STRING,
   },
-},{
+  Group: {
+    type: DataTypes.STRING,
+  },
+}, {
   timestamps: false,
 });
 

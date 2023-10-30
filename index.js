@@ -171,7 +171,9 @@ app.post('/upload', upload.single('excelFile'), async (req, res) => {
                         TotalLead: row.getCell(9).value,
                         ConnectedCall: row.getCell(10).value,
                         TalkTime: row.getCell(11).value,
-                        FinalGroup: row.getCell(12).value,
+                        Final: row.getCell(12).value,
+                        Group: row.getCell(13).value,
+
                     };
 
                     dataToSave.push(rowData);
