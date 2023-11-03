@@ -1062,6 +1062,56 @@ async function formatData(response) {
 
 
 
+async function Ranking(data){
+  const rankings = {
+    AsstManager: {},
+    TeamManager: {},
+    TeamLeader: {},
+  };
+  
+  for (const role in rankings) {
+    rankings[role] = {
+      data: data.filter((item) => item[role] !== undefined),
+      rank: 1,
+    };
+  }
+  
+  for (const role in rankings) {
+    rankings[role].data.sort((a, b) => b.Admissions - a.Admissions);
+  }
+  
+  for (const role in rankings) {
+    let rank = 1;
+    for (let i = 0; i < rankings[role].data.length; i++) {
+      const item = rankings[role].data[i];
+      item.Rank = rank;
+      rank++;
+    }
+  }
+  
+  const rankedData = data.map((item) => {
+    const presentRoles = ['AsstManager', 'TeamManager', 'TeamLeader'].filter(
+      (role) => item[role] !== undefined
+    );
+  
+    let roleRanks = presentRoles.map((role) => {
+      return { role, rank: item[role] ? rankings[role].data.find((x) => x === item) : null };
+    });
+  
+    roleRanks = roleRanks.filter((entry) => entry.rank);
+  
+    if (roleRanks.length > 1) {
+      roleRanks.sort((a, b) => (a.rank.Rank > b.rank.Rank ? 1 : -1));
+    }
+  
+    item.Rank = roleRanks.length > 0 ? roleRanks[0].rank.Rank : 0;
+    return item;
+  });
+  
+  // console.log(rankedData);
+
+return rankedData
+}
 
 
 
@@ -1178,75 +1228,75 @@ async function formatData(response) {
 // Your data
 
 
-async function addRanking(data) {
-  // Create dictionaries to track rankings for each criterion
-  const asstManagerRanks = {};
-  const teamManagerRanks = {};
-  const teamLeaderRanks = {};
+// async function addRanking(data) {
+//   // Create dictionaries to track rankings for each criterion
+//   const asstManagerRanks = {};
+//   const teamManagerRanks = {};
+//   const teamLeaderRanks = {};
 
-  // Create dictionaries to track the counts for each criterion
-  const asstManagerCounts = {};
-  const teamManagerCounts = {};
-  const teamLeaderCounts = {};
+//   // Create dictionaries to track the counts for each criterion
+//   const asstManagerCounts = {};
+//   const teamManagerCounts = {};
+//   const teamLeaderCounts = {};
 
-  data.forEach((item) => {
-    const asstManager = item['AsstManager'];
-    const teamManager = item['TeamManager'];
-    const teamLeader = item['TeamLeader'];
-    const admissions = item['Admissions'];
+//   data.forEach((item) => {
+//     const asstManager = item['AsstManager'];
+//     const teamManager = item['TeamManager'];
+//     const teamLeader = item['TeamLeader'];
+//     const admissions = item['Admissions'];
 
-    // Define a unique identifier based on the combination of names
-    const asstManagerKey = `${asstManager}`;
-    const teamManagerKey = `${asstManager}-${teamManager}`;
-    const teamLeaderKey = `${asstManager}-${teamManager}-${teamLeader}`;
+//     // Define a unique identifier based on the combination of names
+//     const asstManagerKey = `${asstManager}`;
+//     const teamManagerKey = `${asstManager}-${teamManager}`;
+//     const teamLeaderKey = `${asstManager}-${teamManager}-${teamLeader}`;
 
-    // Update the counts for each criterion
-    asstManagerCounts[asstManagerKey] = asstManagerCounts[asstManagerKey] || 0;
-    teamManagerCounts[teamManagerKey] = teamManagerCounts[teamManagerKey] || 0;
-    teamLeaderCounts[teamLeaderKey] = teamLeaderCounts[teamLeaderKey] || 0;
+//     // Update the counts for each criterion
+//     asstManagerCounts[asstManagerKey] = asstManagerCounts[asstManagerKey] || 0;
+//     teamManagerCounts[teamManagerKey] = teamManagerCounts[teamManagerKey] || 0;
+//     teamLeaderCounts[teamLeaderKey] = teamLeaderCounts[teamLeaderKey] || 0;
 
-    asstManagerCounts[asstManagerKey]++;
-    teamManagerCounts[teamManagerKey]++;
-    teamLeaderCounts[teamLeaderKey]++;
+//     asstManagerCounts[asstManagerKey]++;
+//     teamManagerCounts[teamManagerKey]++;
+//     teamLeaderCounts[teamLeaderKey]++;
 
-    // Update rankings only if the names are the same
-    if (asstManagerCounts[asstManagerKey] > 1) {
-      if (!asstManagerRanks[asstManagerKey]) {
-        asstManagerRanks[asstManagerKey] = 1;
-      } else {
-        asstManagerRanks[asstManagerKey]++;
-      }
-      item['AsstManagerRanking'] = asstManagerRanks[asstManagerKey];
-    }
+//     // Update rankings only if the names are the same
+//     if (asstManagerCounts[asstManagerKey] > 1) {
+//       if (!asstManagerRanks[asstManagerKey]) {
+//         asstManagerRanks[asstManagerKey] = 1;
+//       } else {
+//         asstManagerRanks[asstManagerKey]++;
+//       }
+//       item['AsstManagerRanking'] = asstManagerRanks[asstManagerKey];
+//     }
 
-    if (teamManagerCounts[teamManagerKey] > 1) {
-      if (!teamManagerRanks[teamManagerKey]) {
-        teamManagerRanks[teamManagerKey] = 1;
-      } else {
-        teamManagerRanks[teamManagerKey]++;
-      }
-      item['TeamManagerRanking'] = teamManagerRanks[teamManagerKey];
-    }
+//     if (teamManagerCounts[teamManagerKey] > 1) {
+//       if (!teamManagerRanks[teamManagerKey]) {
+//         teamManagerRanks[teamManagerKey] = 1;
+//       } else {
+//         teamManagerRanks[teamManagerKey]++;
+//       }
+//       item['TeamManagerRanking'] = teamManagerRanks[teamManagerKey];
+//     }
 
-    if (teamLeaderCounts[teamLeaderKey] > 1) {
-      if (!teamLeaderRanks[teamLeaderKey]) {
-        teamLeaderRanks[teamLeaderKey] = 1;
-      } else {
-        teamLeaderRanks[teamLeaderKey]++;
-      }
-      item['TeamLeaderRanking'] = teamLeaderRanks[teamLeaderKey];
-    }
-  });
+//     if (teamLeaderCounts[teamLeaderKey] > 1) {
+//       if (!teamLeaderRanks[teamLeaderKey]) {
+//         teamLeaderRanks[teamLeaderKey] = 1;
+//       } else {
+//         teamLeaderRanks[teamLeaderKey]++;
+//       }
+//       item['TeamLeaderRanking'] = teamLeaderRanks[teamLeaderKey];
+//     }
+//   });
 
-  return data;
-}
+//   return data;
+// }
 
 router.get('/react-table-data', async (req, res) => {
   try {
     const counselorData = await HirrachicalData();
     const organizedData = await organizeData(counselorData);
     const formattedData = await formatData(organizedData);
-    const dataWithRanking = await addRanking(formattedData);
+    const dataWithRanking = await Ranking(formattedData);
     console.log(dataWithRanking.length);
     res.json(dataWithRanking);
   } catch (error) {
