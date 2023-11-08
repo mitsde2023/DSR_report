@@ -519,20 +519,8 @@ router.get('/tltm-in', async (req, res) => {
   }
 });
 
-
-// async function ExcludingTL(data){
-//   const filteredData = data.filter(
-//     (item) =>
-//       item.Role === 'Counselor' &&
-//       item.Counselor !== item.TeamManager &&
-//       item.Counselor !== item.SalesManager
-//   );
-//   return filteredData;
-
-// }
 async function ExcludingTL(originalData) {
   try {
-    // Filter data and exclude unwanted records
     const filteredData = originalData.filter((item) =>
       item.Role === "Counselor" &&
       item.Counselor !== item.TeamManager &&
@@ -597,16 +585,135 @@ async function calculateFields(data) {
       headCount: headCount,
       "%Achieve": ((Admissions / Target) * 100).toFixed(2),
       "%Conversion": ((Admissions / TotalLead) * 100).toFixed(2),
-      "C.PSR": (CollectedRevenue / Admissions).toFixed(2),
-      "B.PSR": (BilledRevenue / Admissions).toFixed(2),
-      CPCR: (CollectedRevenue / headCount).toFixed(2),
-      BPCR: (BilledRevenue / headCount).toFixed(2),
+      C_PSR: (CollectedRevenue / Admissions).toFixed(2),
+      B_PSR: (BilledRevenue / Admissions).toFixed(2),
+      C_PCR: (CollectedRevenue / headCount).toFixed(2),
+      B_PCR: (BilledRevenue / headCount).toFixed(2),
       PCE: (Admissions / headCount).toFixed(2)
     };
   });
 
-  return calculatedData;
+  calculatedData.sort((a, b) => a.TeamManager.localeCompare(b.TeamManager) || a.SalesManager.localeCompare(b.SalesManager));
+  const result = [];
+  let currentSalesManager = null;
+  let salesManagerTotal = {
+    Counselor: "Sales Manager Total",
+    TeamLeaders: "",
+    TeamManager: "",
+    SalesManager: "",
+    Target: 0,
+    TotalLead: 0,
+    Admissions: 0,
+    AmountReceived: 0,
+    AmountBilled: 0,
+    headCount: 0,
+    "%Achieve": "",
+    "%Conversion": "",
+    C_PSR: "",
+    B_PSR: "",
+    C_PCR: "",
+    B_PCR: "",
+    PCE: ""
+  };
+
+  let grandTotal = {
+    Counselor: " Grand",
+    TeamLeaders: "",
+    TeamManager: "",
+    SalesManager: " Grand",
+    Target: 0,
+    TotalLead: 0,
+    Admissions: 0,
+    AmountReceived: 0,
+    AmountBilled: 0,
+    headCount: 0,
+    "%Achieve": "",
+    "%Conversion": "",
+    C_PSR: "",
+    B_PSR: "",
+    C_PCR: "",
+    B_PCR: "",
+    PCE: ""
+  };
+
+  for (const item of calculatedData) {
+    if (currentSalesManager !== item.SalesManager) {
+      // If we encounter a new SalesManager, push the current salesManagerTotal to the result array
+      if (currentSalesManager) {
+        // Calculate fields for the salesManagerTotal
+        salesManagerTotal["%Achieve"] = ((salesManagerTotal.Admissions / salesManagerTotal.Target) * 100).toFixed(2);
+        salesManagerTotal["%Conversion"] = ((salesManagerTotal.Admissions / salesManagerTotal.TotalLead) * 100).toFixed(2);
+        salesManagerTotal["C_PSR"] = (salesManagerTotal.AmountReceived / salesManagerTotal.Admissions).toFixed(2);
+        salesManagerTotal["B_PSR"] = (salesManagerTotal.AmountBilled / salesManagerTotal.Admissions).toFixed(2);
+        salesManagerTotal["C_PCR"] = (salesManagerTotal.AmountReceived / salesManagerTotal.headCount).toFixed(2);
+        salesManagerTotal["B_PCR"] = (salesManagerTotal.AmountBilled / salesManagerTotal.headCount).toFixed(2);
+        salesManagerTotal["PCE"] = (salesManagerTotal.Admissions / salesManagerTotal.headCount).toFixed(2);
+
+        result.push(salesManagerTotal);
+      }
+      currentSalesManager = item.SalesManager;
+      salesManagerTotal = { ...salesManagerTotal, SalesManager: currentSalesManager };
+
+      // Reset the total values for the new SalesManager
+      salesManagerTotal.Target = 0;
+      salesManagerTotal.TotalLead = 0;
+      salesManagerTotal.Admissions = 0;
+      salesManagerTotal.AmountReceived = 0;
+      salesManagerTotal.AmountBilled = 0;
+      salesManagerTotal.headCount = 0;
+    }
+
+    if (item.SalesManager) {
+      // Update salesManagerTotal with data from the current row
+      salesManagerTotal.Target += item.Target;
+      salesManagerTotal.TotalLead += item.TotalLead;
+      salesManagerTotal.Admissions += item.Admissions;
+      salesManagerTotal.AmountReceived += item.AmountReceived;
+      salesManagerTotal.AmountBilled += item.AmountBilled;
+      salesManagerTotal.headCount += item.headCount;
+
+      // Update the grand total with data from the current row
+      grandTotal.Target += item.Target;
+      grandTotal.TotalLead += item.TotalLead;
+      grandTotal.Admissions += item.Admissions;
+      grandTotal.AmountReceived += item.AmountReceived;
+      grandTotal.AmountBilled += item.AmountBilled;
+      grandTotal.headCount += item.headCount;
+    }
+
+    // Push the current row to the result array
+    result.push(item);
+  }
+
+  // Push the last salesManagerTotal to the result array
+  if (currentSalesManager) {
+    // Calculate fields for the last salesManagerTotal
+    salesManagerTotal["%Achieve"] = ((salesManagerTotal.Admissions / salesManagerTotal.Target) * 100).toFixed(2);
+    salesManagerTotal["%Conversion"] = ((salesManagerTotal.Admissions / salesManagerTotal.TotalLead) * 100).toFixed(2);
+    salesManagerTotal["C_PSR"] = (salesManagerTotal.AmountReceived / salesManagerTotal.Admissions).toFixed(2);
+    salesManagerTotal["B_PSR"] = (salesManagerTotal.AmountBilled / salesManagerTotal.Admissions).toFixed(2);
+    salesManagerTotal["C_PCR"] = (salesManagerTotal.AmountReceived / salesManagerTotal.headCount).toFixed(2);
+    salesManagerTotal["B_PCR"] = (salesManagerTotal.AmountBilled / salesManagerTotal.headCount).toFixed(2);
+    salesManagerTotal["PCE"] = (salesManagerTotal.Admissions / salesManagerTotal.headCount).toFixed(2);
+
+    result.push(salesManagerTotal);
+  }
+
+  // Calculate fields for the grand total
+  grandTotal["%Achieve"] = ((grandTotal.Admissions / grandTotal.Target) * 100).toFixed(2);
+  grandTotal["%Conversion"] = ((grandTotal.Admissions / grandTotal.TotalLead) * 100).toFixed(2);
+  grandTotal["C_PSR"] = (grandTotal.AmountReceived / grandTotal.Admissions).toFixed(2);
+  grandTotal["B_PSR"] = (grandTotal.AmountBilled / grandTotal.Admissions).toFixed(2);
+  grandTotal["C_PCR"] = (grandTotal.AmountReceived / grandTotal.headCount).toFixed(2);
+  grandTotal["B_PCR"] = (grandTotal.AmountBilled / grandTotal.headCount).toFixed(2);
+  grandTotal["PCE"] = (grandTotal.Admissions / grandTotal.headCount).toFixed(2);
+
+  // Push the grand total to the result array
+  result.push(grandTotal);
+
+  return result;
 }
+
 router.get('/Excluding-TL', async (req, res) => {
   try {
     const counselorData = await HirrachicalData();
@@ -620,6 +727,91 @@ router.get('/Excluding-TL', async (req, res) => {
   }
 });
 
+async function calculateGroupTotals(data) {
+  const groupTotals = {};
+
+  data.forEach((item) => {
+    const group = item.Group;
+
+    if (!groupTotals[group]) {
+      groupTotals[group] = {
+        Group: group,
+        MITSDE:'MITSDE',
+        Target: 0,
+        TotalLead: 0,
+        Admissions: 0,
+        CollectedRevenue: 0,
+        BilledRevenue: 0,
+        headCount: 0
+      };
+    }
+
+    groupTotals[group].Target += item.Target;
+    groupTotals[group].TotalLead += item.TotalLead;
+    groupTotals[group].Admissions += item.Admissions;
+    groupTotals[group].CollectedRevenue += item.CollectedRevenue;
+    groupTotals[group].BilledRevenue += item.BilledRevenue;
+    groupTotals[group].headCount += 1;
+  });
+
+  // Calculate additional fields for each group
+  for (const group in groupTotals) {
+    const groupData = groupTotals[group];
+    groupData["%Achieve"] = ((groupData.Admissions / groupData.Target) * 100).toFixed(2);
+    groupData["%Conversion"] = ((groupData.Admissions / groupData.TotalLead) * 100).toFixed(2);
+    groupData.C_PSR = (groupData.CollectedRevenue / groupData.Admissions).toFixed(2);
+    groupData.B_PSR = (groupData.BilledRevenue / groupData.Admissions).toFixed(2);
+    groupData.C_PCR = (groupData.CollectedRevenue / groupData.headCount).toFixed(2);
+    groupData.B_PCR = (groupData.BilledRevenue / groupData.headCount).toFixed(2);
+    groupData.PCE = (groupData.Admissions / groupData.headCount).toFixed(2);
+  }
+
+  // Calculate the grand total
+  const grandTotal = {
+    Group: "Grand Total",
+    Target: 0,
+    TotalLead: 0,
+    Admissions: 0,
+    CollectedRevenue: 0,
+    BilledRevenue: 0,
+    headCount: 0
+  };
+
+  Object.values(groupTotals).forEach((groupData) => {
+    grandTotal.Target += groupData.Target;
+    grandTotal.TotalLead += groupData.TotalLead;
+    grandTotal.Admissions += groupData.Admissions;
+    grandTotal.CollectedRevenue += groupData.CollectedRevenue;
+    grandTotal.BilledRevenue += groupData.BilledRevenue;
+    grandTotal.headCount += groupData.headCount;
+  });
+
+  grandTotal["%Achieve"] = ((grandTotal.Admissions / grandTotal.Target) * 100).toFixed(2);
+  grandTotal["%Conversion"] = ((grandTotal.Admissions / grandTotal.TotalLead) * 100).toFixed(2);
+  grandTotal.C_PSR = (grandTotal.CollectedRevenue / grandTotal.Admissions).toFixed(2);
+  grandTotal.B_PSR = (grandTotal.BilledRevenue / grandTotal.Admissions).toFixed(2);
+  grandTotal.C_PCR = (grandTotal.CollectedRevenue / grandTotal.headCount).toFixed(2);
+  grandTotal.B_PCR = (grandTotal.BilledRevenue / grandTotal.headCount).toFixed(2);
+  grandTotal.PCE = (grandTotal.Admissions / grandTotal.headCount).toFixed(2);
+
+  const groupDataArray = Object.values(groupTotals);
+  groupDataArray.push(grandTotal);
+
+  return groupDataArray;
+}
+
+
+router.get('/group-wise-overall', async (req, res) => {
+  try {
+    const counselorData = await HirrachicalData();
+    const GropWise = await calculateGroupTotals(counselorData);
+    console.log(GropWise.length)
+    res.json(GropWise);
+  } catch (error) {
+    console.error('Error fetching counselor metrics:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
 router.get('/count-data', async (req, res) => {
   try {
     const counselorData = await HirrachicalData();
