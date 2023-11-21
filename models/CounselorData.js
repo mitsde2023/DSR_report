@@ -52,4 +52,6 @@ CounselorData.hasMany(CounselorWiseSummary, {
   sourceKey: 'Counselor', // This is the name of the column in the CounselorData table
 });
 
+// CounselorData.hasMany(CounselorWiseSummary, { foreignKey: 'ExecutiveName', sourceKey: 'Counselor' });
+
 module.exports = CounselorData;

@@ -6,6 +6,29 @@ const CounselorWiseSummary = require('../models/CounselorWiseSummary');
 
 router.get('/counselor-metrics', async (req, res) => {
   try {
+    console.log(req.query, 9);
+    const salesManager=req.query.selectedSalesManager;
+    const teamManager=req.query.selectedTeamManager;
+    const teamLeader=req.query.selectedTeamLeader;
+
+    let whereClause = {};
+
+    if (salesManager) {
+      whereClause.SalesManager = salesManager;
+    }
+
+    if (teamManager) {
+      whereClause.TeamManager = teamManager;
+      whereClause.SalesManager = salesManager;
+    }
+
+    if (teamLeader) {
+      whereClause.TeamLeaders = teamLeader;
+      whereClause.TeamManager = teamManager;
+      whereClause.SalesManager = salesManager;
+
+    }
+
     const counselorMetrics = await CounselorData.findAll({
       include: [
         {
@@ -29,6 +52,7 @@ router.get('/counselor-metrics', async (req, res) => {
         'Final',
         'Group',
       ],
+      where: whereClause,
     });
 
     const result = [];
@@ -57,8 +81,28 @@ router.get('/counselor-metrics', async (req, res) => {
   }
 });
 
-async function HirrachicalData() {
+
+async function HirrachicalData(salesManager, teamManager, teamLeader) {
+  console.log(salesManager, teamManager, teamLeader, 622);
   try {
+    let whereClause = {};
+
+    if (salesManager) {
+      whereClause.SalesManager = salesManager;
+    }
+
+    if (teamManager) {
+      whereClause.TeamManager = teamManager;
+      whereClause.SalesManager = salesManager;
+    }
+
+    if (teamLeader) {
+      whereClause.TeamLeaders = teamLeader;
+      whereClause.TeamManager = teamManager;
+      whereClause.SalesManager = salesManager;
+
+    }
+
     const counselorMetrics = await CounselorData.findAll({
       include: [
         {
@@ -82,7 +126,10 @@ async function HirrachicalData() {
         'Final',
         'Group',
       ],
+      where: whereClause,
     });
+
+    console.log(counselorMetrics.length, 93);
 
     const result = [];
     counselorMetrics.forEach((counselor) => {
@@ -109,6 +156,188 @@ async function HirrachicalData() {
   }
 }
 
+// async function HirrachicalData() {
+//   try {
+//     const counselorMetrics = await CounselorData.findAll({
+//       include: [
+//         {
+//           model: CounselorWiseSummary,
+//           required: false,
+//           attributes: ['AmountReceived', 'AmountBilled', 'Specialization'],
+//         },
+//       ],
+//       attributes: [
+//         'Counselor',
+//         'TeamLeaders',
+//         'TeamManager',
+//         'SalesManager',
+//         'Role',
+//         'Team',
+//         'Status',
+//         'Target',
+//         'TotalLead',
+//         'ConnectedCall',
+//         'TalkTime',
+//         'Final',
+//         'Group',
+//       ],
+//     });
+
+//     const result = [];
+//     counselorMetrics.forEach((counselor) => {
+//       const AmountReceivedSum = counselor.CounselorWiseSummaries.reduce((sum, summary) => {
+//         return sum + (summary.AmountReceived || 0);
+//       }, 0);
+
+//       const AmountBilledSum = counselor.CounselorWiseSummaries.reduce((sum, summary) => {
+//         return sum + (summary.AmountBilled || 0);
+//       }, 0);
+
+//       result.push({
+//         ...counselor.toJSON(),
+//         Admissions: counselor.CounselorWiseSummaries.length,
+//         CollectedRevenue: AmountReceivedSum,
+//         BilledRevenue: AmountBilledSum,
+//       });
+//     });
+
+//     return result;
+//   } catch (error) {
+//     console.error('Error fetching counselor metrics:', error);
+//     throw error;
+//   }
+// }
+
+async function getHierarchicalData(data) {
+  const hierarchy = {};
+
+  for (const counselorData of data) {
+    const salesManager = counselorData.SalesManager;
+    const teamManager = counselorData.TeamManager;
+    const teamLeaders = counselorData.TeamLeaders;
+    const counselor = counselorData.Counselor;
+    const group = counselorData.Group;
+
+    if (!hierarchy[salesManager]) {
+      hierarchy[salesManager] = {
+        
+      };
+    }
+
+    if (!hierarchy[salesManager][teamManager]) {
+      hierarchy[salesManager][teamManager] = {
+
+      };
+    }
+
+    if (!hierarchy[salesManager][teamManager][teamLeaders]) {
+      hierarchy[salesManager][teamManager][teamLeaders] = [];
+    }
+
+    hierarchy[salesManager][teamManager][teamLeaders].push({
+      counselor,
+      group,
+    });
+  }
+
+  return hierarchy;
+}
+
+
+router.get('/hierarchical-data-filter', async (req, res) => {
+  try {
+    const counselorMetrics = await CounselorData.findAll({
+
+      attributes: [
+        'Counselor',
+        'TeamLeaders',
+        'TeamManager',
+        'SalesManager',
+        'Group',
+      ],
+    });
+    const hierarchicalData = await getHierarchicalData(counselorMetrics);
+    // console.log(hierarchicalData);
+    res.json(hierarchicalData);
+
+  } catch (error) {
+    console.error('Error fetching counselor metrics:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// async function HirrachicalData(selectedSalesManager, selectedTeamManager, selectedTeamLeader) {
+//   try {
+//     const whereClause = {};
+
+//     if (Array.isArray(selectedSalesManager)) {
+//       whereClause['SalesManager'] = { [Op.in]: selectedSalesManager };
+//     } else if (selectedSalesManager) {
+//       whereClause['SalesManager'] = selectedSalesManager;
+//     }
+
+//     if (Array.isArray(selectedTeamManager)) {
+//       whereClause['TeamManager'] = { [Op.in]: selectedTeamManager };
+//     } else if (selectedTeamManager) {
+//       whereClause['TeamManager'] = selectedTeamManager;
+//     }
+
+//     if (Array.isArray(selectedTeamLeader)) {
+//       whereClause['TeamLeaders'] = { [Op.in]: selectedTeamLeader };
+//     } else if (selectedTeamLeader) {
+//       whereClause['TeamLeaders'] = selectedTeamLeader;
+//     }
+
+//     const counselorMetrics = await CounselorData.findAll({
+//       include: [
+//         {
+//           model: CounselorWiseSummary,
+//           required: false,
+//           attributes: ['AmountReceived', 'AmountBilled', 'Specialization'],
+//         },
+//       ],
+//       where: whereClause,
+//       attributes: [
+//         'Counselor',
+//         'TeamLeaders',
+//         'TeamManager',
+//         'SalesManager',
+//         'Role',
+//         'Team',
+//         'Status',
+//         'Target',
+//         'TotalLead',
+//         'ConnectedCall',
+//         'TalkTime',
+//         'Final',
+//         'Group',
+//       ],
+//     });
+
+//     const result = [];
+//     counselorMetrics.forEach((counselor) => {
+//       const AmountReceivedSum = counselor.CounselorWiseSummaries.reduce((sum, summary) => {
+//         return sum + (summary.AmountReceived || 0);
+//       }, 0);
+
+//       const AmountBilledSum = counselor.CounselorWiseSummaries.reduce((sum, summary) => {
+//         return sum + (summary.AmountBilled || 0);
+//       }, 0);
+
+//       result.push({
+//         ...counselor.toJSON(),
+//         Admissions: counselor.CounselorWiseSummaries.length,
+//         CollectedRevenue: AmountReceivedSum,
+//         BilledRevenue: AmountBilledSum,
+//       });
+//     });
+
+//     return result;
+//   } catch (error) {
+//     console.error('Error fetching counselor metrics:', error);
+//     throw error;
+//   }
+// }
 
 
 async function organizeData(data) {
@@ -310,71 +539,134 @@ async function formatData(response) {
   }
   return formattedData;
 }
+function assignRanks(data) {
+  // Initialize rank counters for each role
+  let asstManagerRank = 1;
+  let teamManagerRank = 1;
 
+  // Sort the data based on the "PCE" property in descending order
+  data.sort((a, b) => parseFloat(b.PCE) - parseFloat(a.PCE));
 
+  // Loop through the sorted data to assign ranks
+  data.forEach(entry => {
+    const asstManagerPresent = entry.AsstManager ? true : false;
+    const teamManagerPresent = entry.TeamManager ? true : false;
 
-async function Ranking(data) {
-  const rankings = {
-    AsstManager: {},
-    TeamManager: {},
-    TeamLeader: {},
-  };
-
-  for (const role in rankings) {
-    rankings[role] = {
-      data: data.filter((item) => item[role] !== undefined),
-      rank: 1,
-    };
-  }
-
-  for (const role in rankings) {
-    rankings[role].data.sort((a, b) => b.Admissions - a.Admissions);
-  }
-
-  for (const role in rankings) {
-    let rank = 1;
-    for (let i = 0; i < rankings[role].data.length; i++) {
-      const item = rankings[role].data[i];
-      item.Rank = rank;
-      rank++;
-    }
-  }
-
-  const rankedData = data.map((item) => {
-    const presentRoles = ['AsstManager', 'TeamManager', 'TeamLeader'].filter(
-      (role) => item[role] !== undefined
-    );
-
-    let roleRanks = presentRoles.map((role) => {
-      return { role, rank: item[role] ? rankings[role].data.find((x) => x === item) : null };
-    });
-
-    roleRanks = roleRanks.filter((entry) => entry.rank);
-
-    if (roleRanks.length > 1) {
-      roleRanks.sort((a, b) => (a.rank.Rank > b.rank.Rank ? 1 : -1));
+    // Assign ranks based on the presence of AsstManager and TeamManager
+    if (asstManagerPresent && teamManagerPresent) {
+      // Check if AsstManager and TeamManager have different values
+      if (entry.AsstManager !== entry.TeamManager) {
+        // Assign separate ranks for AsstManager and TeamManager
+        entry.AsstManagerRank = asstManagerRank++;
+        entry.TeamManagerRank = teamManagerRank++;
+      } else {
+        // Assign the same rank for both AsstManager and TeamManager if they have the same value
+        entry.AsstManagerRank = entry.TeamManagerRank = asstManagerRank++;
+      }
+    } else if (asstManagerPresent) {
+      // Assign rank for AsstManager only
+      entry.AsstManagerRank = asstManagerRank++;
+    } else if (teamManagerPresent) {
+      // Assign rank for TeamManager only
+      entry.TeamManagerRank = teamManagerRank++;
     }
 
-    item.Rank = roleRanks.length > 0 ? roleRanks[0].rank.Rank : 0;
-    return item;
+    // You can continue this pattern for other roles if needed
+
+    // Print the updated entry with ranks
+    console.log(entry);
   });
 
-  return rankedData
+  // Return the modified data
+  return data;
 }
+
+
+
+
+
+
+
+// async function Rank(data) {
+//   const rankings = {
+//     AsstManager: {},
+//     TeamManager: {},
+//     TeamLeader: {},
+//   };
+
+//   for (const role in rankings) {
+//     rankings[role] = {
+//       data: data.filter((item) => item[role] !== undefined),
+//       rank: 1,
+//     };
+//   }
+
+//   for (const role in rankings) {
+//     rankings[role].data.sort((a, b) => b.Admissions - a.Admissions);
+//   }
+
+//   for (const role in rankings) {
+//     let rank = 1;
+//     for (let i = 0; i < rankings[role].data.length; i++) {
+//       const item = rankings[role].data[i];
+//       item.Rank = rank;
+//       rank++;
+//     }
+//   }
+
+//   const rankedData = data.map((item) => {
+//     const presentRoles = ['AsstManager', 'TeamManager', 'TeamLeader'].filter(
+//       (role) => item[role] !== undefined
+//     );
+
+//     let roleRanks = presentRoles.map((role) => {
+//       return { role, rank: item[role] ? rankings[role].data.find((x) => x === item) : null };
+//     });
+
+//     roleRanks = roleRanks.filter((entry) => entry.rank);
+
+//     if (roleRanks.length > 1) {
+//       roleRanks.sort((a, b) => (a.rank.Rank > b.rank.Rank ? 1 : -1));
+//     }
+
+//     item.Rank = roleRanks.length > 0 ? roleRanks[0].rank.Rank : 0;
+//     return item;
+//   });
+
+//   return rankedData
+// }
 
 
 router.get('/react-table-data', async (req, res) => {
   try {
-    const counselorData = await HirrachicalData();
+
+    const { selectedSalesManager, selectedTeamManager, selectedTeamLeader } = req.query; // Use req.query instead of req.params
+    console.log( selectedSalesManager, selectedTeamManager, selectedTeamLeader ,539)
+    const counselorData = await HirrachicalData( selectedSalesManager, selectedTeamManager, selectedTeamLeader );
     const organizedData = await organizeData(counselorData);
     const formattedData = await formatData(organizedData);
-    const dataWithRanking = await Ranking(formattedData);
-    res.json(dataWithRanking);
+    // console.log(formattedData)
+    const dataWithRanking = await assignRanks(formattedData);
+    res.json(formattedData);
   } catch (error) {
     console.error('Error fetching counselor metrics:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+
+// router.get('/react-table-data', async (req, res) => {
+//   try {
+//     // const { salesManager, teamManager, teamLeader } = req.params;
+//     const counselorData = await HirrachicalData();
+//     const organizedData = await organizeData(counselorData);
+//     const formattedData = await formatData(organizedData);
+//     const dataWithRanking = await Ranking(formattedData);
+//     res.json(dataWithRanking);
+//   } catch (error) {
+//     console.error('Error fetching counselor metrics:', error);
+//     res.status(500).json({ error: 'Internal Server Error' });
+//   }
+// });
 
 
 
@@ -508,7 +800,8 @@ async function TltmReStruData(originalData) {
 
 router.get('/tltm-in', async (req, res) => {
   try {
-    const counselorData = await HirrachicalData();
+    const { selectedSalesManager, selectedTeamManager, selectedTeamLeader } = req.query; 
+    const counselorData = await HirrachicalData(selectedSalesManager, selectedTeamManager, selectedTeamLeader );
     const tltmdata = await TltmData(counselorData);
     const reStruTltm = await TltmReStruData(tltmdata)
     console.log(reStruTltm.length)
@@ -714,13 +1007,74 @@ async function calculateFields(data) {
   return result;
 }
 
+async function Ranking(data) {
+  const rankings = {
+    AsstManager: {},
+    TeamManager: {},
+    TeamLeader: {},
+  };
+
+  for (const role in rankings) {
+    rankings[role] = {
+      data: data.filter((item) => item[role] !== undefined && item[role] !== ""),
+      rank: 1,
+    };
+  }
+
+  for (const role in rankings) {
+    rankings[role].data.sort((a, b) => b.PCE - a.PCE);
+  }
+
+  for (const role in rankings) {
+    let rank = 1;
+    for (let i = 0; i < rankings[role].data.length; i++) {
+      const item = rankings[role].data[i];
+      item.Rank = rank;
+      rank++;
+    }
+  }
+
+  const rankedData = data.map((item) => {
+    const presentRoles = ['AsstManager', 'TeamManager', 'TeamLeader'].filter(
+      (role) => item[role] !== undefined && item[role] !== ""
+    );
+
+    // Check if both TeamLeaders and TeamManager are null or empty
+    if (presentRoles.length > 0) {
+      let roleRanks = presentRoles.map((role) => {
+        return { role, rank: item[role] ? rankings[role].data.find((x) => x === item) : null };
+      });
+
+      roleRanks = roleRanks.filter((entry) => entry.rank);
+
+      // Check if all roles have the same rank
+      const sameRank = roleRanks.every((entry) => entry.rank.Rank === roleRanks[0].rank.Rank);
+
+      if (roleRanks.length > 1 && !sameRank) {
+        roleRanks.sort((a, b) => (a.rank.Rank > b.rank.Rank ? 1 : -1));
+      }
+
+      item.Rank = roleRanks.length > 0 ? roleRanks[0].rank.Rank : '';
+    }
+
+    return item;
+  });
+
+  return rankedData;
+}
+
+
+
 router.get('/Excluding-TL', async (req, res) => {
   try {
-    const counselorData = await HirrachicalData();
+    const { selectedSalesManager, selectedTeamManager, selectedTeamLeader } = req.query; 
+
+    const counselorData = await HirrachicalData(selectedSalesManager, selectedTeamManager, selectedTeamLeader);
     const excludeTl = await ExcludingTL(counselorData);
     const calStruTltm = await calculateFields(excludeTl)
-    console.log(calStruTltm.length)
-    res.json(calStruTltm);
+    const rankingData= await Ranking(calStruTltm)
+    console.log(rankingData.length)
+    res.json(rankingData);
   } catch (error) {
     console.error('Error fetching counselor metrics:', error);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -736,7 +1090,7 @@ async function calculateGroupTotals(data) {
     if (!groupTotals[group]) {
       groupTotals[group] = {
         Group: group,
-        MITSDE:'MITSDE',
+        MITSDE: 'MITSDE',
         Target: 0,
         TotalLead: 0,
         Admissions: 0,
@@ -803,7 +1157,9 @@ async function calculateGroupTotals(data) {
 
 router.get('/group-wise-overall', async (req, res) => {
   try {
-    const counselorData = await HirrachicalData();
+    const { selectedSalesManager, selectedTeamManager, selectedTeamLeader } = req.query; 
+
+    const counselorData = await HirrachicalData(selectedSalesManager, selectedTeamManager, selectedTeamLeader);
     const GropWise = await calculateGroupTotals(counselorData);
     console.log(GropWise.length)
     res.json(GropWise);

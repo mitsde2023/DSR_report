@@ -100,4 +100,5 @@ const CounselorWiseSummary = sequelize.define('CounselorWiseSummary', {
   timestamps: false,
 });
 
+
 module.exports = CounselorWiseSummary;
