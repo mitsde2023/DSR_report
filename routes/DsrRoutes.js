@@ -4,9 +4,31 @@ const { Sequelize, Op } = require('sequelize');
 const CounselorData = require('../models/CounselorData');
 const CounselorWiseSummary = require('../models/CounselorWiseSummary');
 
+
+router.delete('/deleteAllRecords', async (req, res) => {
+  try {
+    // Delete all records from CounselorWiseSummary
+    await CounselorWiseSummary.destroy({
+      where: {},
+      truncate: true, // This option ensures that all records are deleted without logging individual deletions
+    });
+
+    // Delete all records from CounselorData
+    await CounselorData.destroy({
+      where: {},
+      truncate: true,
+    });
+
+    res.status(200).json({ message: 'All records deleted successfully.' });
+  } catch (error) {
+    console.error('Error deleting records:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 router.get('/counselor-metrics', async (req, res) => {
   try {
-    console.log(req.query, 9);
+    // console.log(req.query, 9);
     const salesManager=req.query.selectedSalesManager;
     const teamManager=req.query.selectedTeamManager;
     const teamLeader=req.query.selectedTeamLeader;
@@ -34,7 +56,7 @@ router.get('/counselor-metrics', async (req, res) => {
         {
           model: CounselorWiseSummary,
           required: false,
-          attributes: ['AmountReceived', 'AmountBilled', 'Specialization'],
+          attributes: ['AmountReceived', 'AmountBilled', 'Specialization', 'SaleDate'],
         },
       ],
       attributes: [
@@ -83,7 +105,7 @@ router.get('/counselor-metrics', async (req, res) => {
 
 
 async function HirrachicalData(salesManager, teamManager, teamLeader) {
-  console.log(salesManager, teamManager, teamLeader, 622);
+  // console.log(salesManager, teamManager, teamLeader, 622);
   try {
     let whereClause = {};
 
@@ -102,13 +124,40 @@ async function HirrachicalData(salesManager, teamManager, teamLeader) {
       whereClause.SalesManager = salesManager;
 
     }
+    // const dateFilter = {};
+
+    // // Assuming startDate and endDate are the two dates you want to filter
+    // if (startDate && endDate) {
+    //   // If both start and end dates are provided, apply the date range filter
+    //   dateFilter.SaleDate = {
+    //     [Op.between]: [startDate, endDate],
+    //   };
+    // } else if (startDate) {
+    //   // If only start date is provided, filter for that date
+    //   dateFilter.SaleDate = {
+    //     [Op.gte]: startDate,
+    //   };
+    // } else if (endDate) {
+    //   // If only end date is provided, filter for that date
+    //   dateFilter.SaleDate = {
+    //     [Op.lte]: endDate,
+    //   };
+    // }
+    
 
     const counselorMetrics = await CounselorData.findAll({
       include: [
         {
           model: CounselorWiseSummary,
           required: false,
-          attributes: ['AmountReceived', 'AmountBilled', 'Specialization'],
+          attributes: ['AmountReceived', 'AmountBilled', 'Specialization', 'SaleDate'],
+          // where: dateFilter, // Use the renamed dateFilter
+          // where: { SaleDate: '2023-10-03 00:00:00Z' } // Use an object instead of a string
+          // where: {
+          //   SaleDate: {
+          //     [Op.between]: ['2023-10-01T00:00:00Z', '2023-10-03T23:59:59Z'],
+          //   },
+          // },
         },
       ],
       attributes: [
@@ -128,6 +177,7 @@ async function HirrachicalData(salesManager, teamManager, teamLeader) {
       ],
       where: whereClause,
     });
+    
 
     console.log(counselorMetrics.length, 93);
 
@@ -637,6 +687,143 @@ function assignRanks(data) {
 // }
 
 
+async function assignRanks(data) {
+  const rankings = {
+    AsstManager: {},
+    TeamManager: {},
+    TeamLeader: {},
+  };
+
+  for (const role in rankings) {
+    rankings[role] = {
+      data: data.filter((item) => item[role] !== undefined),
+      rank: 1,
+    };
+  }
+
+  for (const role in rankings) {
+    rankings[role].data.sort((a, b) => b.Admissions - a.Admissions);
+  }
+
+  for (const role in rankings) {
+    let rank = 1;
+    for (let i = 0; i < rankings[role].data.length; i++) {
+      const item = rankings[role].data[i];
+      item.Rank = rank;
+      rank++;
+    }
+  }
+
+  const rankedData = data.map((item) => {
+    const presentRoles = ['AsstManager', 'TeamManager', 'TeamLeader'].filter(
+      (role) => item[role] !== undefined
+    );
+
+    if (
+      (presentRoles.includes('TeamManager') && presentRoles.includes('TeamLeader') &&
+        item.TeamManager === item.TeamLeader) ||
+      (presentRoles.includes('AsstManager') && presentRoles.includes('TeamManager') &&
+        presentRoles.includes('TeamLeader') &&
+        item.AsstManager === item.TeamManager && item.TeamManager === item.TeamLeader) || (presentRoles.includes('AsstManager') &&
+        item.AsstManager === "Pravin Patare")
+    ) {
+      // If TeamManager and TeamLeader values are the same, or
+      // AsstManager, TeamManager, and TeamLeader values are the same, do not provide a Rank field
+      item.Rank = '';
+    } else {
+      let roleRanks = presentRoles.map((role) => {
+        return { role, rank: item[role] ? rankings[role].data.find((x) => x === item) : null };
+      });
+
+      roleRanks = roleRanks.filter((entry) => entry.rank);
+
+      if (roleRanks.length > 1)  {
+        roleRanks.sort((a, b) => (a.rank.Rank > b.rank.Rank ? 1 : -1));
+      }
+      // Set the last rank to rank-1
+      item.Rank = roleRanks.length > 0 ? roleRanks[0].rank.Rank : 0;
+      if ((item.Rank > 21) && ( presentRoles.includes('TeamManager') &&
+      presentRoles.includes('TeamLeader') &&
+      presentRoles.includes('AsstManager') &&
+      item.TeamManager !== item.TeamLeader &&
+      item.AsstManager !== item.TeamManager &&
+      item.AsstManager !== item.TeamLeader)) {
+        item.Rank = item.Rank - 1;
+      }
+    }
+
+    return item;
+  });
+
+  return rankedData;
+}
+
+
+
+
+// async function assignRanks(data) {
+//   const rankings = {
+//     AsstManager: {},
+//     TeamManager: {},
+//     TeamLeader: {},
+//   };
+
+//   for (const role in rankings) {
+//     rankings[role] = {
+//       data: data.filter((item) => item[role] !== undefined),
+//       rank: 1,
+//     };
+//   }
+
+//   for (const role in rankings) {
+//     rankings[role].data.sort((a, b) => b.Admissions - a.Admissions);
+//   }
+
+//   for (const role in rankings) {
+//     let rank = 1;
+//     for (let i = 0; i < rankings[role].data.length; i++) {
+//       const item = rankings[role].data[i];
+//       item.Rank = rank;
+//       rank++;
+//     }
+//   }
+
+//   const rankedData = data.map((item) => {
+//     const presentRoles = ['AsstManager', 'TeamManager', 'TeamLeader'].filter(
+//       (role) => item[role] !== undefined
+//     );
+
+//     if (
+//       (presentRoles.includes('TeamManager') && presentRoles.includes('TeamLeader') &&
+//         item.TeamManager === item.TeamLeader) ||
+//       (presentRoles.includes('AsstManager') && presentRoles.includes('TeamManager') &&
+//         presentRoles.includes('TeamLeader') &&
+//         item.AsstManager === item.TeamManager && item.TeamManager === item.TeamLeader) || (presentRoles.includes('AsstManager') &&
+//         item.AsstManager === "Pravin Patare")
+//     ) {
+//       // If TeamManager and TeamLeader values are the same, or
+//       // AsstManager, TeamManager, and TeamLeader values are the same, do not provide a Rank field
+//       item.Rank = '';
+//     } else {
+//       let roleRanks = presentRoles.map((role) => {
+//         return { role, rank: item[role] ? rankings[role].data.find((x) => x === item) : null };
+//       });
+
+//       roleRanks = roleRanks.filter((entry) => entry.rank);
+
+//       if (roleRanks.length > 1) {
+//         roleRanks.sort((a, b) => (a.rank.Rank > b.rank.Rank ? 1 : -1));
+//       }
+
+//       item.Rank = roleRanks.length > 0 ? roleRanks[0].rank.Rank : 0;
+//     }
+
+//     return item;
+//   });
+
+//   return rankedData;
+// }
+
 router.get('/react-table-data', async (req, res) => {
   try {
 
@@ -647,12 +834,29 @@ router.get('/react-table-data', async (req, res) => {
     const formattedData = await formatData(organizedData);
     // console.log(formattedData)
     const dataWithRanking = await assignRanks(formattedData);
-    res.json(formattedData);
+    res.json(dataWithRanking);
   } catch (error) {
     console.error('Error fetching counselor metrics:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+
+// router.get('/react-table-data', async (req, res) => {
+//   try {
+
+//     const { selectedSalesManager, selectedTeamManager, selectedTeamLeader } = req.query; // Use req.query instead of req.params
+//     console.log( selectedSalesManager, selectedTeamManager, selectedTeamLeader ,539)
+//     const counselorData = await HirrachicalData( selectedSalesManager, selectedTeamManager, selectedTeamLeader );
+//     const organizedData = await organizeData(counselorData);
+//     const formattedData = await formatData(organizedData);
+//     // console.log(formattedData)
+//     const dataWithRanking = await assignRanks(formattedData);
+//     res.json(formattedData);
+//   } catch (error) {
+//     console.error('Error fetching counselor metrics:', error);
+//     res.status(500).json({ error: 'Internal Server Error' });
+//   }
+// });
 
 // router.get('/react-table-data', async (req, res) => {
 //   try {

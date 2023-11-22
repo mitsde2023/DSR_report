@@ -3,6 +3,7 @@ const cors = require('cors');
 const multer = require('multer');
 const ExcelJS = require('exceljs');
 const DsrRoutes = require('./routes/DsrRoutes');
+const DsrDeleteDataRoutes = require('./routes/DataDelete');
 const sequelize = require('./config');
 const CounselorWiseSummery = require('./models/CounselorData');
 const CounselorWiseSummary = require('./models/CounselorWiseSummary')
@@ -35,6 +36,7 @@ sequelize
       })();
       
 app.use('/dsr_report', DsrRoutes);
+app.use('/data_Delete', DsrDeleteDataRoutes);
 
 app.get('/', (req, res) => {
     res.json('Hello, how are you...');
