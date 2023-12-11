@@ -104,7 +104,7 @@ router.get('/counselor-metrics', async (req, res) => {
 });
 
 
-async function HirrachicalData(salesManager, teamManager, teamLeader) {
+async function HirrachicalData(salesManager, teamManager, teamLeader ) {
   // console.log(salesManager, teamManager, teamLeader, 622);
   try {
     let whereClause = {};
@@ -124,6 +124,7 @@ async function HirrachicalData(salesManager, teamManager, teamLeader) {
       whereClause.SalesManager = salesManager;
 
     }
+    // const SaleDate = SaleDate;
     // const dateFilter = {};
 
     // // Assuming startDate and endDate are the two dates you want to filter
@@ -544,7 +545,7 @@ async function formatData(response) {
             'B_PSR': (teamLeader.BilledRevenue / admissions).toFixed(2),
             'C_PCR': (teamLeader.CollectedRevenue / teamLeaderCounselorCount).toFixed(2),
             'B_PCR': (teamLeader.BilledRevenue / teamLeaderCounselorCount).toFixed(2),
-            'PCE': (admissions / teamLeaderCounselorCount).toFixed(2)
+            'PCE': Number((admissions / teamLeaderCounselorCount).toFixed(2))
           });
         }
         // Check if the TeamManager is not the same as the AsstManager, then add a new row
@@ -564,7 +565,7 @@ async function formatData(response) {
             'B_PSR': (teamManager.BilledRevenue / teamManager.Admissions).toFixed(2),
             'C_PCR': (teamManager.CollectedRevenue / (teamManager.TeamManagerCount - 1)).toFixed(2),
             'B_PCR': (teamManager.BilledRevenue / (teamManager.TeamManagerCount - 1)).toFixed(2),
-            'PCE': (teamManager.Admissions / (teamManager.TeamManagerCount - 1)).toFixed(2)
+            'PCE': Number((teamManager.Admissions / (teamManager.TeamManagerCount - 1)).toFixed(2))
           });
         }
 
@@ -583,111 +584,17 @@ async function formatData(response) {
         'B_PSR': (manager.BilledRevenue / manager.Admissions).toFixed(2),
         'C_PCR': (manager.CollectedRevenue / manager.TeamLeaderCount).toFixed(2),
         'B_PCR': (manager.BilledRevenue / manager.TeamLeaderCount).toFixed(2),
-        'PCE': (manager.Admissions / manager.TeamLeaderCount).toFixed(2)
+        'PCE': Number((manager.Admissions / manager.TeamLeaderCount).toFixed(2))
       });
     }
   }
   return formattedData;
 }
-function assignRanks(data) {
-  // Initialize rank counters for each role
-  let asstManagerRank = 1;
-  let teamManagerRank = 1;
-
-  // Sort the data based on the "PCE" property in descending order
-  data.sort((a, b) => parseFloat(b.PCE) - parseFloat(a.PCE));
-
-  // Loop through the sorted data to assign ranks
-  data.forEach(entry => {
-    const asstManagerPresent = entry.AsstManager ? true : false;
-    const teamManagerPresent = entry.TeamManager ? true : false;
-
-    // Assign ranks based on the presence of AsstManager and TeamManager
-    if (asstManagerPresent && teamManagerPresent) {
-      // Check if AsstManager and TeamManager have different values
-      if (entry.AsstManager !== entry.TeamManager) {
-        // Assign separate ranks for AsstManager and TeamManager
-        entry.AsstManagerRank = asstManagerRank++;
-        entry.TeamManagerRank = teamManagerRank++;
-      } else {
-        // Assign the same rank for both AsstManager and TeamManager if they have the same value
-        entry.AsstManagerRank = entry.TeamManagerRank = asstManagerRank++;
-      }
-    } else if (asstManagerPresent) {
-      // Assign rank for AsstManager only
-      entry.AsstManagerRank = asstManagerRank++;
-    } else if (teamManagerPresent) {
-      // Assign rank for TeamManager only
-      entry.TeamManagerRank = teamManagerRank++;
-    }
-
-    // You can continue this pattern for other roles if needed
-
-    // Print the updated entry with ranks
-    console.log(entry);
-  });
-
-  // Return the modified data
-  return data;
-}
 
 
 
 
-
-
-
-// async function Rank(data) {
-//   const rankings = {
-//     AsstManager: {},
-//     TeamManager: {},
-//     TeamLeader: {},
-//   };
-
-//   for (const role in rankings) {
-//     rankings[role] = {
-//       data: data.filter((item) => item[role] !== undefined),
-//       rank: 1,
-//     };
-//   }
-
-//   for (const role in rankings) {
-//     rankings[role].data.sort((a, b) => b.Admissions - a.Admissions);
-//   }
-
-//   for (const role in rankings) {
-//     let rank = 1;
-//     for (let i = 0; i < rankings[role].data.length; i++) {
-//       const item = rankings[role].data[i];
-//       item.Rank = rank;
-//       rank++;
-//     }
-//   }
-
-//   const rankedData = data.map((item) => {
-//     const presentRoles = ['AsstManager', 'TeamManager', 'TeamLeader'].filter(
-//       (role) => item[role] !== undefined
-//     );
-
-//     let roleRanks = presentRoles.map((role) => {
-//       return { role, rank: item[role] ? rankings[role].data.find((x) => x === item) : null };
-//     });
-
-//     roleRanks = roleRanks.filter((entry) => entry.rank);
-
-//     if (roleRanks.length > 1) {
-//       roleRanks.sort((a, b) => (a.rank.Rank > b.rank.Rank ? 1 : -1));
-//     }
-
-//     item.Rank = roleRanks.length > 0 ? roleRanks[0].rank.Rank : 0;
-//     return item;
-//   });
-
-//   return rankedData
-// }
-
-
-async function assignRanks(data) {
+async function assignRank(data) {
   const rankings = {
     AsstManager: {},
     TeamManager: {},
@@ -742,7 +649,7 @@ async function assignRanks(data) {
       }
       // Set the last rank to rank-1
       item.Rank = roleRanks.length > 0 ? roleRanks[0].rank.Rank : 0;
-      if ((item.Rank > 21) && ( presentRoles.includes('TeamManager') &&
+      if ((item.Rank > 22) && ( presentRoles.includes('TeamManager') &&
       presentRoles.includes('TeamLeader') &&
       presentRoles.includes('AsstManager') &&
       item.TeamManager !== item.TeamLeader &&
@@ -761,79 +668,20 @@ async function assignRanks(data) {
 
 
 
-// async function assignRanks(data) {
-//   const rankings = {
-//     AsstManager: {},
-//     TeamManager: {},
-//     TeamLeader: {},
-//   };
 
-//   for (const role in rankings) {
-//     rankings[role] = {
-//       data: data.filter((item) => item[role] !== undefined),
-//       rank: 1,
-//     };
-//   }
 
-//   for (const role in rankings) {
-//     rankings[role].data.sort((a, b) => b.Admissions - a.Admissions);
-//   }
 
-//   for (const role in rankings) {
-//     let rank = 1;
-//     for (let i = 0; i < rankings[role].data.length; i++) {
-//       const item = rankings[role].data[i];
-//       item.Rank = rank;
-//       rank++;
-//     }
-//   }
-
-//   const rankedData = data.map((item) => {
-//     const presentRoles = ['AsstManager', 'TeamManager', 'TeamLeader'].filter(
-//       (role) => item[role] !== undefined
-//     );
-
-//     if (
-//       (presentRoles.includes('TeamManager') && presentRoles.includes('TeamLeader') &&
-//         item.TeamManager === item.TeamLeader) ||
-//       (presentRoles.includes('AsstManager') && presentRoles.includes('TeamManager') &&
-//         presentRoles.includes('TeamLeader') &&
-//         item.AsstManager === item.TeamManager && item.TeamManager === item.TeamLeader) || (presentRoles.includes('AsstManager') &&
-//         item.AsstManager === "Pravin Patare")
-//     ) {
-//       // If TeamManager and TeamLeader values are the same, or
-//       // AsstManager, TeamManager, and TeamLeader values are the same, do not provide a Rank field
-//       item.Rank = '';
-//     } else {
-//       let roleRanks = presentRoles.map((role) => {
-//         return { role, rank: item[role] ? rankings[role].data.find((x) => x === item) : null };
-//       });
-
-//       roleRanks = roleRanks.filter((entry) => entry.rank);
-
-//       if (roleRanks.length > 1) {
-//         roleRanks.sort((a, b) => (a.rank.Rank > b.rank.Rank ? 1 : -1));
-//       }
-
-//       item.Rank = roleRanks.length > 0 ? roleRanks[0].rank.Rank : 0;
-//     }
-
-//     return item;
-//   });
-
-//   return rankedData;
-// }
 
 router.get('/react-table-data', async (req, res) => {
   try {
 
     const { selectedSalesManager, selectedTeamManager, selectedTeamLeader } = req.query; // Use req.query instead of req.params
-    console.log( selectedSalesManager, selectedTeamManager, selectedTeamLeader ,539)
+    console.log( selectedSalesManager, selectedTeamManager, selectedTeamLeader , 539)
     const counselorData = await HirrachicalData( selectedSalesManager, selectedTeamManager, selectedTeamLeader );
     const organizedData = await organizeData(counselorData);
     const formattedData = await formatData(organizedData);
     // console.log(formattedData)
-    const dataWithRanking = await assignRanks(formattedData);
+    const dataWithRanking = await assignRank(formattedData);
     res.json(dataWithRanking);
   } catch (error) {
     console.error('Error fetching counselor metrics:', error);
